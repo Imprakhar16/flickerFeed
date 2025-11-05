@@ -24,4 +24,11 @@ app.use(passport.session());
 
 app.use('/auth', authRoutes);
 
-app.listen(process.env.PORT,()=>console.log(`server is up and running on ${process.env.PORT} port`)) 
+app.get('/health', (req, res) => {
+  res.status(200).send('OK');
+});
+
+const port = process.env.PORT || 10000; 
+app.listen(port, () => {
+  console.log(`Server is up and running on port ${port}`);
+});

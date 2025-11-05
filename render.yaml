@@ -7,13 +7,13 @@ services:
     plan: free
     buildCommand: npm install
     startCommand: npm start
-    healthCheckPath: /
+    healthCheckPath: /health
     envVars:
       - key: NODE_ENV
         value: production
       - key: PORT
         value: 10000
-      - key: MONGODB_URI
+      - key: MONGO_URI
         sync: false
       - key: GOOGLE_CLIENT_ID
         sync: false
