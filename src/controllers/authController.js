@@ -13,6 +13,9 @@ export const registerUser = async (req, res) => {
 
     const hashedPassword = await bcrypt.hash(password, 10);
 
+    // If file uploaded, store file path
+    const profilePhoto = req.file ? `/uploads/${req.file.filename}` : null;
+
     const newUser = new User({
       userName,
       firstName,
@@ -20,12 +23,13 @@ export const registerUser = async (req, res) => {
       email,
       gender,
       password: hashedPassword,
+      profilePhoto,
     });
 
     await newUser.save();
-    res.status(201).json({ message: "User registered successfully" });
+    res.status(201).json({ message: "User registered successfully", user: newUser });
   } catch (error) {
-    console.error(error);
+    console.error("Error registering user:", error);
     res.status(500).json({ message: "Error registering user" });
   }
 };

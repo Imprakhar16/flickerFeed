@@ -1,12 +1,12 @@
 import express from 'express';
-
+import upload from '../middlewares/upload.js';
 
 import { googleAuthenticate, googleLogin, loginUser, logout, registerUser } from '../controllers/authController.js';
 
 const router = express.Router();
 
 
-router.post('/register',registerUser );
+router.post('/register', upload.single("profilePhoto"),registerUser );
 
 router.post('/login',loginUser);
 
