@@ -6,15 +6,17 @@ export const registerUser = async (req, res) => {
   const { userName, firstName, lastName, email, gender, password } = req.body;
 
   try {
+   
     const existingUser = await User.findOne({ email });
     if (existingUser) {
       return res.status(400).json({ message: "Email is already registered" });
     }
 
+    // Hash password
     const hashedPassword = await bcrypt.hash(password, 10);
 
-    // If file uploaded, store file path
-    const profilePhoto = req.file ? `/uploads/${req.file.filename}` : null;
+    // Cloudinary profile photo URL
+    const profilePhoto = req.file?.path || null;
 
     const newUser = new User({
       userName,
@@ -27,12 +29,17 @@ export const registerUser = async (req, res) => {
     });
 
     await newUser.save();
-    res.status(201).json({ message: "User registered successfully", user: newUser });
+
+    res.status(201).json({
+      message: "User registered successfully",
+      user: newUser,
+    });
   } catch (error) {
     console.error("Error registering user:", error);
-    res.status(500).json({ message: "Error registering user" });
+    res.status(500).json({ message: "Server error" });
   }
 };
+
 
 export const loginUser = async (req, res) => {
   const { email, password } = req.body;
