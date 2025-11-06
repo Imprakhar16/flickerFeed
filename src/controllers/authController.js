@@ -14,7 +14,7 @@ const generateOtp = () => {
 };
 
 const generateOtpToken = (email, otp) => {
-  return jwt.sign({ email, otp }, process.env.JWT_SECRET, { expiresIn: "1h" });
+  return jwt.sign({ email, otp }, process.env.JWT_SECRET, { expiresIn: "10m" });
 };
 
 export const registerUser = async (req, res) => {
@@ -70,7 +70,6 @@ export const registerUser = async (req, res) => {
       otpToken: otpToken,
     });
   } catch (error) {
-    console.error("Error registering user:", error);
     res.status(500).json({ message: "Server error" });
   }
 };
