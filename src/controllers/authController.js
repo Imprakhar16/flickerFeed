@@ -19,7 +19,7 @@ const generateOtpToken = (email, otp) => {
 
 export const registerUser = async (req, res) => {
   try {
-    const { userName, firstName, lastName, email, gender, password } = req.body;
+    const { userName, firstName, lastName, email, gender, password } = req.body || {};
 
     if (!userName || !firstName || !lastName || !email || !gender || !password) {
       return res.status(400).json({ message: "All fields are required" });
