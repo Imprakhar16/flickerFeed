@@ -81,17 +81,26 @@ export const loginUser = async (req, res) => {
   try {
     const user = await User.findOne({ email });
     if (!user) {
-      return res.status(400).json({ message: "Please register yourself First" });
+      return res
+        .status(400)
+        .json({ message: "Please register yourself First" });
     }
 
-    if(!user.isVerified) return res.status(400).json({message:"You are not verified,Please verify yourself"})
+    if (!user.isVerified)
+      return res
+        .status(400)
+        .json({ message: "You are not verified,Please verify yourself" });
 
     const isMatch = await bcrypt.compare(password, user.password);
     if (!isMatch) {
       return res.status(400).json({ message: "Invalid credentials" });
     }
 
-    res.status(200).json({ message: "Login successful", user:user,token:generateToken(user._id) });
+    res.status(200).json({
+      message: "Login successful",
+      user: user,
+      token: generateToken(user._id),
+    });
   } catch (error) {
     console.error(error);
     res.status(500).json({ message: "Error logging in" });
@@ -198,5 +207,70 @@ export const resendOTP = async (req, res) => {
     });
   } catch (error) {
     res.status(500).json({ message: "Server error" });
+  }
+};
+
+export const forgotPassword = async (req, res) => {
+  try {
+    const { email } = req.body;
+    if (!email) return res.status(400).json({ message: "Email is required" });
+
+    const user = await User.findOne({ email: email.toLowerCase() });
+    if (!user) return res.status(404).json({ message: "User not found" });
+    if (!user.isVerified)
+      return res.status(400).json({ message: "Please verify yourself first" });
+    const forgotToken = jwt.sign({ email }, process.env.JWT_SECRET, {
+      expiresIn: "15m",
+    });
+
+    const resetLink = `${
+      process.env.frontEnd_URL
+    }/reset-password?token=${encodeURIComponent(forgotToken)}&email=${email}`;
+
+    const emailBody = `<div style="font-family: Arial, sans-serif; color: #333; text-align: center; padding: 20px;">
+    <h2 style="color: #4CAF50;">Reset Your FlickerFeed Password</h2>
+    <p>We received a request to reset your password.</p>
+    <p>Click the button below to create a new password:</p>
+    <a href="${resetLink}" style="background-color:#4CAF50;color:white;padding:10px 20px;text-decoration:none;border-radius:5px;display:inline-block;margin-top:10px;">
+      Reset Password
+    </a>
+    <p style="font-size: 0.9em; color: #555; margin-top:20px;">
+      This link is valid for 15 minutes. If you didn’t request a reset, please ignore this email.
+    </p>
+  </div>
+`;
+    await send_mail({
+      email: email,
+      subject: "FlickerFeed: Password Reset Request",
+      body: emailBody,
+    });
+
+    res.status(200).json({
+      message: "Password reset link sent to your email",
+    });
+  } catch (error) {
+    res.status(500).json({ message: "Server error" });
+  }
+};
+
+export const resetPassword = async (req, res) => {
+  try {
+    const { forgotToken, newPassword } = req.body;
+    if (!forgotToken)
+      return res.status(404).json({ message: "Token is required" });
+
+    if (!newPassword)
+      return res.status(404).json({ message: "New password is required" });
+    const decoded = jwt.verify(forgotToken, process.env.JWT_SECRET);
+    const user = await User.findOne({ email: decoded.email });
+    if (!user) return res.status(404).json({ message: "User not found" });
+
+    user.password = await bcrypt.hash(newPassword, 10);
+    await user.save();
+    res.status(200).json({ message: "Password reset successful" });
+  } catch (error) {
+    if (error.name === "TokenExpiredError")
+      return res.status(400).json({ message: "Reset link expired" });
+    res.status(400).json({ message: "Invalid or expired token" });
   }
 };
