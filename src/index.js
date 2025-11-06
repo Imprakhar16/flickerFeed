@@ -40,7 +40,7 @@ const __dirname = path.dirname(__filename);
 app.use("/uploads", express.static(path.join(__dirname, "uploads")));
 
 // Routes
-app.use("/auth", authRoutes);
+app.use("/", authRoutes);
 
 
 app.get("/health", (req, res) => {
