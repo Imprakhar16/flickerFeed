@@ -4,11 +4,10 @@ import passport from "passport";
 import session from "express-session";
 import path from "path";
 import { fileURLToPath } from "url";
-
+import cors from "cors";
 import connectDB from "./config/db.js";
 import authRoutes from "./routes/authRoutes.js"; 
 import "./config/passport.js";
-
 
 dotenv.config();
 
@@ -23,13 +22,20 @@ app.use(express.urlencoded({ extended: true }));
 
 
 app.use(
+  cors({
+    origin: process.env.frontEnd_URL || "*", 
+    methods: ["GET", "POST", "PUT", "DELETE"],
+    credentials: true,
+  })
+);
+
+app.use(
   session({
     secret: process.env.SESSION_SECRET,
     resave: false,
     saveUninitialized: true,
   })
 );
-
 
 app.use(passport.initialize());
 app.use(passport.session());
@@ -41,7 +47,6 @@ app.use("/uploads", express.static(path.join(__dirname, "uploads")));
 
 // Routes
 app.use("/", authRoutes);
-
 
 app.get("/health", (req, res) => {
   res.status(200).send("OK");

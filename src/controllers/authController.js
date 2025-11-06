@@ -18,20 +18,33 @@ const generateOtpToken = (email, otp) => {
 };
 
 export const registerUser = async (req, res) => {
-  const { userName, firstName, lastName, email, gender, password } = req.body;
-
   try {
+    const { userName, firstName, lastName, email, gender, password } = req.body;
+
+    if (!userName || !firstName || !lastName || !email || !gender || !password) {
+      return res.status(400).json({ message: "All fields are required" });
+    }
+
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(email)) {
+      return res.status(400).json({ message: "Invalid email format" });
+    }
+
+    if (password.length < 6) {
+      return res.status(400).json({ message: "Password must be at least 6 characters long" });
+    }
+
     const existingUser = await User.findOne({ email });
     if (existingUser) {
       return res.status(400).json({ message: "Email is already registered" });
     }
 
-    // Hash password
     const hashedPassword = await bcrypt.hash(password, 10);
     const otp = generateOtp();
-    // Cloudinary profile photo URL
-    const profilePhoto = req.file?.path || null;
     const otpToken = generateOtpToken(email, otp);
+
+    let profilePhoto = req.file?.path || null;
+
     const newUser = new User({
       userName,
       firstName,
@@ -43,14 +56,15 @@ export const registerUser = async (req, res) => {
     });
 
     await newUser.save();
+
     const emailBody = `
-    <div style="font-family: Arial, sans-serif; color: #333; text-align: center; padding: 20px;">
-      <h2 style="color: #4CAF50;">Welcome to FlickerFeed, ${firstName}!</h2>
-      <p>Thank you for registering. Please use the OTP below to verify your email address:</p>
-      <h1 style="background: #f1f1f1; display: inline-block; padding: 10px 20px; border-radius: 5px;">${otp}</h1>
-      <p style="font-size: 0.9em; color: #555;">This OTP is valid for 10 minutes.</p>
-    </div>
-  `;
+      <div style="font-family: Arial, sans-serif; color: #333; text-align: center; padding: 20px;">
+        <h2 style="color: #4CAF50;">Welcome to FlickerFeed, ${firstName}!</h2>
+        <p>Thank you for registering. Please use the OTP below to verify your email address:</p>
+        <h1 style="background: #f1f1f1; display: inline-block; padding: 10px 20px; border-radius: 5px;">${otp}</h1>
+        <p style="font-size: 0.9em; color: #555;">This OTP is valid for 10 minutes.</p>
+      </div>
+    `;
 
     const mailResponse = await send_mail({
       email,
@@ -58,19 +72,30 @@ export const registerUser = async (req, res) => {
       body: emailBody,
     });
 
-    if (!mailResponse.success) {
+    if (!mailResponse?.success) {
+      await User.findByIdAndDelete(newUser._id);
       return res.status(500).json({
-        message: "Failed to send OTP email",
-        error: mailResponse.error,
+        message: "Failed to send OTP email. Please try again later.",
+        error: mailResponse?.error,
       });
     }
-    res.status(201).json({
-      message: "User registered successfully",
-      user: newUser,
-      otpToken: otpToken,
+
+    return res.status(201).json({
+      message: "User registered successfully. OTP sent to your email.",
+      user: {
+        _id: newUser._id,
+        userName: newUser.userName,
+        email: newUser.email,
+        gender: newUser.gender,
+        profilePhoto: newUser.profilePhoto,
+      },
+      otpToken,
     });
   } catch (error) {
-    res.status(500).json({ message: "Server error" });
+    return res.status(500).json({
+      message: "Internal Server Error",
+      error: error.message,
+    });
   }
 };
 
@@ -78,17 +103,18 @@ export const loginUser = async (req, res) => {
   const { email, password } = req.body;
 
   try {
-    const user = await User.findOne({ email });
-    if (!user) {
-      return res
-        .status(400)
-        .json({ message: "Please register yourself First" });
+    if (!email || !password) {
+      return res.status(400).json({ message: "Email and password are required" });
     }
 
-    if (!user.isVerified)
-      return res
-        .status(400)
-        .json({ message: "You are not verified,Please verify yourself" });
+    const user = await User.findOne({ email });
+    if (!user) {
+      return res.status(400).json({ message: "Please register yourself first" });
+    }
+
+    if (!user.isVerified) {
+      return res.status(400).json({ message: "You are not verified, please verify yourself" });
+    }
 
     const isMatch = await bcrypt.compare(password, user.password);
     if (!isMatch) {
@@ -97,14 +123,22 @@ export const loginUser = async (req, res) => {
 
     res.status(200).json({
       message: "Login successful",
-      user: user,
+      user: {
+        _id: user._id,
+        userName: user.userName,
+        email: user.email,
+        gender: user.gender,
+        profilePhoto: user.profilePhoto,
+        isVerified: user.isVerified
+      },
       token: generateToken(user._id),
     });
   } catch (error) {
     console.error(error);
-    res.status(500).json({ message: "Error logging in" });
+    res.status(500).json({ message: "Error logging in", error: error.message });
   }
 };
+
 
 export const googleLogin = passport.authenticate("google", {
   scope: ["profile", "email"], // Request profile and email from Google
