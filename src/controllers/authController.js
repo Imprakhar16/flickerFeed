@@ -79,7 +79,7 @@ export const registerUser = async (req, res) => {
         error: mailResponse?.error,
       });
     }
-
+ if (mailResponse.success){
     return res.status(201).json({
       message: "User registered successfully. OTP sent to your email.",
       user: {
@@ -91,6 +91,7 @@ export const registerUser = async (req, res) => {
       },
       otpToken,    
     });
+  }
   } catch (error) {
     return res.status(500).json({
       message: "Internal Server Error",
