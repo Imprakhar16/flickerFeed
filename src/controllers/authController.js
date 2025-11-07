@@ -89,7 +89,7 @@ export const registerUser = async (req, res) => {
         gender: newUser.gender,
         profilePhoto: newUser.profilePhoto,
       },
-      otpToken,
+      otpToken,    
     });
   } catch (error) {
     return res.status(500).json({

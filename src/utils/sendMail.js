@@ -9,7 +9,7 @@ const send_mail = async ({ email, subject, body }) => {
       },
     });
     const mailOption = {
-      from: process.env.MY_APP_PASS,
+      from: process.env.MY_GMAIL,
       to: email,
       subject: subject,
       html: body,
@@ -21,5 +21,6 @@ const send_mail = async ({ email, subject, body }) => {
     return { success: false, message: "Failed to send OTP", error };
   }
 };
+ 
 
 export default send_mail;
